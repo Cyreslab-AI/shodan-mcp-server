@@ -16,7 +16,54 @@ A Model Context Protocol server that provides access to Shodan API functionality
 
 ## Installation
 
-The server is already installed and configured for both Claude Desktop and Cline VSCode extension.
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm (v7 or higher)
+
+### Installation Steps
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/Cyreslab-AI/shodan-mcp-server.git
+   cd shodan-mcp-server
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Build the project:
+
+   ```bash
+   npm run build
+   ```
+
+4. Configure your Shodan API key:
+   - Create a `.env` file in the root directory
+   - Add your Shodan API key: `SHODAN_API_KEY=your_api_key_here`
+   - Or set it as an environment variable when running the server
+
+### MCP Configuration
+
+To use this server with Claude or other MCP-compatible assistants, add it to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "mcp-shodan-server": {
+      "command": "node",
+      "args": ["/path/to/shodan-mcp-server/build/index.js"],
+      "env": {
+        "SHODAN_API_KEY": "YOUR_SHODAN_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
 
 ## Usage
 
