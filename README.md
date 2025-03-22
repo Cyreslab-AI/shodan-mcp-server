@@ -1,4 +1,5 @@
 # Shodan MCP Server
+[![smithery badge](https://smithery.ai/badge/@Cyreslab-AI/shodan-mcp-server)](https://smithery.ai/server/@Cyreslab-AI/shodan-mcp-server)
 
 A Model Context Protocol server that provides access to Shodan API functionality, developed by [Cyreslab.ai](https://cyreslab.ai). This server enables AI assistants like Claude to query information about internet-connected devices and services, enhancing cybersecurity research and threat intelligence capabilities.
 
@@ -15,6 +16,14 @@ A Model Context Protocol server that provides access to Shodan API functionality
 - **Field Selection**: Filter results to include only specific fields
 
 ## Installation
+
+### Installing via Smithery
+
+To install Shodan MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@Cyreslab-AI/shodan-mcp-server):
+
+```bash
+npx -y @smithery/cli install @Cyreslab-AI/shodan-mcp-server --client claude
+```
 
 ### Prerequisites
 
