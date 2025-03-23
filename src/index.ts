@@ -205,6 +205,150 @@ class ShodanClient {
   }
 
   /**
+   * Scan a network range (CIDR notation) for devices
+   */
+  async scanNetworkRange(cidr: string, maxItems: number = 5, selectedFields?: string[]): Promise<any> {
+    try {
+      // Convert CIDR to Shodan search query format
+      const query = `net:${cidr}`;
+      const response = await this.axiosInstance.get("/shodan/host/search", {
+        params: { query }
+      });
+      return this.sampleResponse(response.data, maxItems, selectedFields);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get DNS information for a domain
+   */
+  async getDnsInfo(domain: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get("/dns/domain", {
+        params: { domain }
+      });
+      return this.sampleResponse(response.data, 10);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get SSL certificate information for a domain
+   */
+  async getSslInfo(domain: string): Promise<any> {
+    try {
+      // Use Shodan search to find SSL certificates for the domain
+      const query = `ssl:${domain}`;
+      const response = await this.axiosInstance.get("/shodan/host/search", {
+        params: { query }
+      });
+
+      // Extract and format SSL certificate information
+      const results = this.sampleResponse(response.data, 5);
+
+      // Process the results to extract SSL certificate details
+      if (results.matches && results.matches.length > 0) {
+        const sslInfo = results.matches.map((match: any) => {
+          if (match.ssl && match.ssl.cert) {
+            return {
+              ip: match.ip_str,
+              port: match.port,
+              subject: match.ssl.cert.subject,
+              issuer: match.ssl.cert.issuer,
+              expires: match.ssl.cert.expires,
+              issued: match.ssl.cert.issued,
+              fingerprint: match.ssl.cert.fingerprint,
+              cipher: match.ssl.cipher,
+              version: match.ssl.version
+            };
+          }
+          return null;
+        }).filter(Boolean);
+
+        return {
+          total: sslInfo.length,
+          certificates: sslInfo
+        };
+      }
+
+      return { total: 0, certificates: [] };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Search for specific types of IoT devices
+   */
+  async searchIotDevices(deviceType: string, country?: string, maxItems: number = 5): Promise<any> {
+    try {
+      // Build query based on device type and optional country
+      let query = `"${deviceType}"`;
+      if (country) {
+        query += ` country:${country}`;
+      }
+
+      const response = await this.axiosInstance.get("/shodan/host/search", {
+        params: { query }
+      });
+
+      const results = this.sampleResponse(response.data, maxItems);
+
+      // Extract relevant IoT device information
+      if (results.matches && results.matches.length > 0) {
+        const devices = results.matches.map((match: any) => {
+          return {
+            ip: match.ip_str,
+            port: match.port,
+            organization: match.org,
+            location: match.location,
+            hostnames: match.hostnames,
+            product: match.product,
+            version: match.version,
+            timestamp: match.timestamp
+          };
+        });
+
+        return {
+          total_found: results.total,
+          sample_size: devices.length,
+          devices: devices
+        };
+      }
+
+      return { total_found: 0, devices: [] };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Generate a summary of search results
    */
   summarizeResults(data: any): any {
@@ -403,6 +547,81 @@ class ShodanServer {
               },
               required: ["cve"]
             }
+          },
+          {
+            name: "scan_network_range",
+            description: "Scan a network range (CIDR notation) for devices",
+            inputSchema: {
+              type: "object",
+              properties: {
+                cidr: {
+                  type: "string",
+                  description: "Network range in CIDR notation (e.g., 192.168.1.0/24)"
+                },
+                max_items: {
+                  type: "number",
+                  description: "Maximum number of items to include in results (default: 5)"
+                },
+                fields: {
+                  type: "array",
+                  items: {
+                    type: "string"
+                  },
+                  description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
+                }
+              },
+              required: ["cidr"]
+            }
+          },
+          {
+            name: "get_dns_info",
+            description: "Get DNS information for a domain",
+            inputSchema: {
+              type: "object",
+              properties: {
+                domain: {
+                  type: "string",
+                  description: "Domain name to look up (e.g., example.com)"
+                }
+              },
+              required: ["domain"]
+            }
+          },
+          {
+            name: "get_ssl_info",
+            description: "Get SSL certificate information for a domain",
+            inputSchema: {
+              type: "object",
+              properties: {
+                domain: {
+                  type: "string",
+                  description: "Domain name to look up SSL certificates for (e.g., example.com)"
+                }
+              },
+              required: ["domain"]
+            }
+          },
+          {
+            name: "search_iot_devices",
+            description: "Search for specific types of IoT devices",
+            inputSchema: {
+              type: "object",
+              properties: {
+                device_type: {
+                  type: "string",
+                  description: "Type of IoT device to search for (e.g., 'webcam', 'router', 'smart tv')"
+                },
+                country: {
+                  type: "string",
+                  description: "Optional country code to limit search (e.g., 'US', 'DE')"
+                },
+                max_items: {
+                  type: "number",
+                  description: "Maximum number of items to include in results (default: 5)"
+                }
+              },
+              required: ["device_type"]
+            }
           }
         ]
       };
@@ -516,6 +735,128 @@ class ShodanServer {
             throw new McpError(
               ErrorCode.InternalError,
               `Error getting vulnerability info: ${(error as Error).message}`
+            );
+          }
+        }
+
+        case "scan_network_range": {
+          const cidr = String(request.params.arguments?.cidr);
+          if (!cidr) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              "CIDR notation is required"
+            );
+          }
+
+          const maxItems = Number(request.params.arguments?.max_items) || 5;
+          const fields = Array.isArray(request.params.arguments?.fields)
+            ? request.params.arguments?.fields.map(String)
+            : undefined;
+
+          try {
+            const scanResults = await this.shodanClient.scanNetworkRange(cidr, maxItems, fields);
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(scanResults, null, 2)
+              }]
+            };
+          } catch (error) {
+            if (error instanceof McpError) {
+              throw error;
+            }
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Error scanning network range: ${(error as Error).message}`
+            );
+          }
+        }
+
+        case "get_dns_info": {
+          const domain = String(request.params.arguments?.domain);
+          if (!domain) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              "Domain name is required"
+            );
+          }
+
+          try {
+            const dnsInfo = await this.shodanClient.getDnsInfo(domain);
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(dnsInfo, null, 2)
+              }]
+            };
+          } catch (error) {
+            if (error instanceof McpError) {
+              throw error;
+            }
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Error getting DNS information: ${(error as Error).message}`
+            );
+          }
+        }
+
+        case "get_ssl_info": {
+          const domain = String(request.params.arguments?.domain);
+          if (!domain) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              "Domain name is required"
+            );
+          }
+
+          try {
+            const sslInfo = await this.shodanClient.getSslInfo(domain);
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(sslInfo, null, 2)
+              }]
+            };
+          } catch (error) {
+            if (error instanceof McpError) {
+              throw error;
+            }
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Error getting SSL certificate information: ${(error as Error).message}`
+            );
+          }
+        }
+
+        case "search_iot_devices": {
+          const deviceType = String(request.params.arguments?.device_type);
+          if (!deviceType) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              "Device type is required"
+            );
+          }
+
+          const country = request.params.arguments?.country
+            ? String(request.params.arguments.country)
+            : undefined;
+          const maxItems = Number(request.params.arguments?.max_items) || 5;
+
+          try {
+            const iotDevices = await this.shodanClient.searchIotDevices(deviceType, country, maxItems);
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(iotDevices, null, 2)
+              }]
+            };
+          } catch (error) {
+            if (error instanceof McpError) {
+              throw error;
+            }
+            throw new McpError(
+              ErrorCode.InternalError,
+              `Error searching for IoT devices: ${(error as Error).message}`
             );
           }
         }

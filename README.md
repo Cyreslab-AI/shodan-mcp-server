@@ -1,5 +1,4 @@
 # Shodan MCP Server
-[![smithery badge](https://smithery.ai/badge/@Cyreslab-AI/shodan-mcp-server)](https://smithery.ai/server/@Cyreslab-AI/shodan-mcp-server)
 
 A Model Context Protocol server that provides access to Shodan API functionality, developed by [Cyreslab.ai](https://cyreslab.ai). This server enables AI assistants like Claude to query information about internet-connected devices and services, enhancing cybersecurity research and threat intelligence capabilities.
 
@@ -11,19 +10,15 @@ A Model Context Protocol server that provides access to Shodan API functionality
 - **Host Information Lookup**: Get detailed information about a specific IP address
 - **Search Functionality**: Search Shodan's database for devices and services using various filters
 - **Vulnerability Information**: Get details about specific CVE vulnerabilities
+- **Network Range Scanning**: Analyze entire CIDR ranges for security assessment
+- **DNS Information**: Retrieve DNS records for domains
+- **SSL Certificate Analysis**: Get detailed SSL certificate information for domains
+- **IoT Device Search**: Find specific types of IoT devices across the internet
 - **Result Summarization**: Generate concise summaries of search results
 - **Response Sampling**: Automatically limit response size to reduce token usage
 - **Field Selection**: Filter results to include only specific fields
 
 ## Installation
-
-### Installing via Smithery
-
-To install Shodan MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@Cyreslab-AI/shodan-mcp-server):
-
-```bash
-npx -y @smithery/cli install @Cyreslab-AI/shodan-mcp-server --client claude
-```
 
 ### Prerequisites
 
@@ -157,6 +152,74 @@ Use the `get_vulnerabilities` tool to retrieve information about a specific CVE:
 </use_mcp_tool>
 ```
 
+### Scan Network Range
+
+Use the `scan_network_range` tool to analyze devices within a CIDR range:
+
+```
+<use_mcp_tool>
+<server_name>mcp-shodan-server</server_name>
+<tool_name>scan_network_range</tool_name>
+<arguments>
+{
+  "cidr": "192.168.1.0/24",
+  "max_items": 10,
+  "fields": ["ip_str", "ports", "hostnames", "os"]
+}
+</arguments>
+</use_mcp_tool>
+```
+
+### Get DNS Information
+
+Use the `get_dns_info` tool to retrieve DNS records for a domain:
+
+```
+<use_mcp_tool>
+<server_name>mcp-shodan-server</server_name>
+<tool_name>get_dns_info</tool_name>
+<arguments>
+{
+  "domain": "example.com"
+}
+</arguments>
+</use_mcp_tool>
+```
+
+### Get SSL Certificate Information
+
+Use the `get_ssl_info` tool to analyze SSL certificates for a domain:
+
+```
+<use_mcp_tool>
+<server_name>mcp-shodan-server</server_name>
+<tool_name>get_ssl_info</tool_name>
+<arguments>
+{
+  "domain": "example.com"
+}
+</arguments>
+</use_mcp_tool>
+```
+
+### Search for IoT Devices
+
+Use the `search_iot_devices` tool to find specific types of IoT devices:
+
+```
+<use_mcp_tool>
+<server_name>mcp-shodan-server</server_name>
+<tool_name>search_iot_devices</tool_name>
+<arguments>
+{
+  "device_type": "webcam",
+  "country": "US",
+  "max_items": 5
+}
+</arguments>
+</use_mcp_tool>
+```
+
 ## Search Query Examples
 
 - `apache country:US`: Find Apache servers in the United States
@@ -244,7 +307,6 @@ This will return:
 
 Future versions of this server will include:
 
-- **Network Range Scanning**: Analyze entire CIDR ranges for security assessment
 - **Advanced Vulnerability Correlation**: Link CVEs with affected devices and potential exploits
 - **Historical Data Analysis**: Track changes in device exposure over time
 - **Internet Maps & Real-time Data**: Visualize internet-wide technology deployments
@@ -252,5 +314,7 @@ Future versions of this server will include:
 - **Threat Intelligence Integration**: Correlate Shodan data with threat feeds
 - **Reporting Capabilities**: Generate comprehensive security reports
 - **API Rate Limit Management**: Smart handling of API quotas and rate limits
+- **Geospatial Analysis**: Advanced location-based analysis of internet devices
+- **Automated Scanning**: Scheduled scans with alerting capabilities
 
 Have feature suggestions or found a bug? Please open an issue on our [GitHub repository](https://github.com/Cyreslab-AI) or contact us directly at [contact@cyreslab.ai](mailto:contact@cyreslab.ai).

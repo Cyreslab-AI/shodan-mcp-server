@@ -1,15 +1,28 @@
 {
   "name": "mcp-shodan-server",
-  "version": "0.1.0",
-  "description": "A Model Context Protocol server for Shodan API integration",
+  "version": "0.2.0",
+  "description": "A Model Context Protocol server for comprehensive Shodan API integration with advanced cybersecurity features",
   "private": true,
   "author": "Cyreslab.ai <contact@cyreslab.ai> (https://cyreslab.ai)",
-  "homepage": "https://cyreslab.ai",
+  "homepage": "https://github.com/Cyreslab-AI/shodan-mcp-server",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Cyreslab-AI"
+    "url": "https://github.com/Cyreslab-AI/shodan-mcp-server"
   },
   "license": "MIT",
+  "keywords": [
+    "shodan",
+    "cybersecurity",
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "security",
+    "network-scanning",
+    "vulnerability",
+    "dns",
+    "ssl",
+    "iot"
+  ],
   "type": "module",
   "bin": {
     "mcp-shodan-server": "./build/index.js"
