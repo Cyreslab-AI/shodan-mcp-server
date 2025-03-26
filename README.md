@@ -1,7 +1,3 @@
-<a href="https://glama.ai/mcp/servers/@Cyreslab-AI/shodan-mcp-server">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@Cyreslab-AI/shodan-mcp-server/badge" />
-</a>
-
 # Shodan MCP Server
 
 A Model Context Protocol server that provides access to Shodan API functionality, developed by [Cyreslab.ai](https://cyreslab.ai). This server enables AI assistants like Claude to query information about internet-connected devices and services, enhancing cybersecurity research and threat intelligence capabilities.
