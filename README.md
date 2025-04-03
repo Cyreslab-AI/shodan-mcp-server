@@ -1,31 +1,16 @@
 # Shodan MCP Server
 
-A Model Context Protocol server that provides access to Shodan API functionality, developed by [Cyreslab.ai](https://cyreslab.ai). This server enables AI assistants like Claude to query information about internet-connected devices and services, enhancing cybersecurity research and threat intelligence capabilities.
-
-**GitHub Repository**: [https://github.com/Cyreslab-AI](https://github.com/Cyreslab-AI)
-**Contact**: [contact@cyreslab.ai](mailto:contact@cyreslab.ai)
+A Model Context Protocol (MCP) server that provides access to Shodan API functionality, allowing AI assistants to query information about internet-connected devices and services.
 
 ## Features
 
-- **Host Information Lookup**: Get detailed information about a specific IP address
-- **Search Functionality**: Search Shodan's database for devices and services using various filters
-- **Vulnerability Information**: Get details about specific CVE vulnerabilities
-- **Network Range Scanning**: Analyze entire CIDR ranges for security assessment
-- **DNS Information**: Retrieve DNS records for domains
-- **SSL Certificate Analysis**: Get detailed SSL certificate information for domains
-- **IoT Device Search**: Find specific types of IoT devices across the internet
-- **Result Summarization**: Generate concise summaries of search results
-- **Response Sampling**: Automatically limit response size to reduce token usage
-- **Field Selection**: Filter results to include only specific fields
+- **Host Information**: Get detailed information about specific IP addresses
+- **Search Capabilities**: Search Shodan's database for devices and services
+- **Network Scanning**: Scan network ranges (CIDR notation) for devices
+- **SSL Certificate Information**: Get SSL certificate details for domains
+- **IoT Device Search**: Find specific types of IoT devices
 
 ## Installation
-
-### Prerequisites
-
-- Node.js (v16 or higher)
-- npm (v7 or higher)
-
-### Installation Steps
 
 1. Clone the repository:
 
@@ -40,281 +25,115 @@ A Model Context Protocol server that provides access to Shodan API functionality
    npm install
    ```
 
-3. Build the project:
+3. Build the server:
 
    ```bash
    npm run build
    ```
 
-4. Configure your Shodan API key:
-   - Create a `.env` file in the root directory
-   - Add your Shodan API key: `SHODAN_API_KEY=your_api_key_here`
-   - Or set it as an environment variable when running the server
+4. Set up your Shodan API key:
 
-### MCP Configuration
+   ```bash
+   export SHODAN_API_KEY="your-api-key-here"
+   ```
 
-To use this server with Claude or other MCP-compatible assistants, add it to your MCP configuration:
+5. Start the server:
+   ```bash
+   npm start
+   ```
 
-```json
-{
-  "mcpServers": {
-    "mcp-shodan-server": {
-      "command": "node",
-      "args": ["/path/to/shodan-mcp-server/build/index.js"],
-      "env": {
-        "SHODAN_API_KEY": "YOUR_SHODAN_API_KEY_HERE"
-      }
-    }
-  }
-}
-```
+## MCP Integration
 
-## Usage
+This server can be integrated with Claude or other MCP-compatible AI assistants. To add it to Claude Desktop or Claude.app:
 
-### Get Host Information
+1. Add the server to your MCP settings:
 
-Use the `get_host_info` tool to retrieve detailed information about a specific IP address:
+   ```json
+   {
+     "mcpServers": {
+       "shodan": {
+         "command": "node",
+         "args": ["/path/to/shodan-mcp-server/build/index.js"],
+         "env": {
+           "SHODAN_API_KEY": "your-api-key-here"
+         }
+       }
+     }
+   }
+   ```
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>get_host_info</tool_name>
-<arguments>
-{
-  "ip": "8.8.8.8"
-}
-</arguments>
-</use_mcp_tool>
-```
+2. Restart Claude to load the new MCP server.
 
-With field selection and response sampling:
+## Available Tools
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>get_host_info</tool_name>
-<arguments>
-{
-  "ip": "8.8.8.8",
-  "max_items": 3,
-  "fields": ["ip_str", "ports", "hostnames", "location.country_name"]
-}
-</arguments>
-</use_mcp_tool>
-```
+### get_host_info
 
-### Search Shodan
+Get detailed information about a specific IP address.
 
-Use the `search_shodan` tool to search Shodan's database for devices and services:
+**Parameters:**
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>search_shodan</tool_name>
-<arguments>
-{
-  "query": "apache country:US",
-  "page": 1,
-  "facets": ["country", "org"]
-}
-</arguments>
-</use_mcp_tool>
-```
+- `ip` (required): IP address to look up
+- `max_items` (optional): Maximum number of items to include in arrays (default: 5)
+- `fields` (optional): List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])
 
-With result summarization:
+### search_shodan
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>search_shodan</tool_name>
-<arguments>
-{
-  "query": "apache country:US",
-  "summarize": true
-}
-</arguments>
-</use_mcp_tool>
-```
+Search Shodan's database for devices and services.
 
-### Get Vulnerability Information
+**Parameters:**
 
-Use the `get_vulnerabilities` tool to retrieve information about a specific CVE:
+- `query` (required): Shodan search query (e.g., 'apache country:US')
+- `page` (optional): Page number for results pagination (default: 1)
+- `facets` (optional): List of facets to include in the search results (e.g., ['country', 'org'])
+- `max_items` (optional): Maximum number of items to include in arrays (default: 5)
+- `fields` (optional): List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])
+- `summarize` (optional): Whether to return a summary of the results instead of the full data (default: false)
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>get_vulnerabilities</tool_name>
-<arguments>
-{
-  "cve": "CVE-2021-44228"
-}
-</arguments>
-</use_mcp_tool>
-```
+### scan_network_range
 
-### Scan Network Range
+Scan a network range (CIDR notation) for devices.
 
-Use the `scan_network_range` tool to analyze devices within a CIDR range:
+**Parameters:**
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>scan_network_range</tool_name>
-<arguments>
-{
-  "cidr": "192.168.1.0/24",
-  "max_items": 10,
-  "fields": ["ip_str", "ports", "hostnames", "os"]
-}
-</arguments>
-</use_mcp_tool>
-```
+- `cidr` (required): Network range in CIDR notation (e.g., 192.168.1.0/24)
+- `max_items` (optional): Maximum number of items to include in results (default: 5)
+- `fields` (optional): List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])
 
-### Get DNS Information
+### get_ssl_info
 
-Use the `get_dns_info` tool to retrieve DNS records for a domain:
+Get SSL certificate information for a domain.
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>get_dns_info</tool_name>
-<arguments>
-{
-  "domain": "example.com"
-}
-</arguments>
-</use_mcp_tool>
-```
+**Parameters:**
 
-### Get SSL Certificate Information
+- `domain` (required): Domain name to look up SSL certificates for (e.g., example.com)
 
-Use the `get_ssl_info` tool to analyze SSL certificates for a domain:
+### search_iot_devices
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>get_ssl_info</tool_name>
-<arguments>
-{
-  "domain": "example.com"
-}
-</arguments>
-</use_mcp_tool>
-```
+Search for specific types of IoT devices.
 
-### Search for IoT Devices
+**Parameters:**
 
-Use the `search_iot_devices` tool to find specific types of IoT devices:
+- `device_type` (required): Type of IoT device to search for (e.g., 'webcam', 'router', 'smart tv')
+- `country` (optional): Optional country code to limit search (e.g., 'US', 'DE')
+- `max_items` (optional): Maximum number of items to include in results (default: 5)
 
-```
-<use_mcp_tool>
-<server_name>mcp-shodan-server</server_name>
-<tool_name>search_iot_devices</tool_name>
-<arguments>
-{
-  "device_type": "webcam",
-  "country": "US",
-  "max_items": 5
-}
-</arguments>
-</use_mcp_tool>
-```
+## Available Resources
 
-## Search Query Examples
+- `shodan://host/{ip}`: Information about a specific IP address
 
-- `apache country:US`: Find Apache servers in the United States
-- `port:22 country:DE`: Find SSH servers in Germany
-- `webcam has_screenshot:true`: Find webcams with screenshots
-- `org:"Microsoft" product:"Windows"`: Find Microsoft Windows devices
-- `ssl:Google`: Find SSL certificates issued to Google
+## API Limitations
 
-## Advanced Usage
+Some Shodan API endpoints require a paid membership. The following features are only available with a paid Shodan API key:
 
-### Pagination
+- Search functionality
+- Network scanning
+- SSL certificate lookup
+- IoT device search
 
-For search results with many matches, you can paginate through the results by specifying the `page` parameter:
+## License
 
-```json
-{
-  "query": "apache country:US",
-  "page": 2
-}
-```
+MIT
 
-### Facets
+## Developed by
 
-Facets allow you to get summary information about the search results. For example, you can get a breakdown of the countries or organizations in the search results:
-
-```json
-{
-  "query": "apache",
-  "facets": ["country", "org"]
-}
-```
-
-Common facets include:
-
-- `country`: Country code
-- `org`: Organization
-- `domain`: Domain name
-- `port`: Port number
-- `asn`: Autonomous System Number
-- `os`: Operating System
-
-### Response Sampling
-
-To reduce token usage, all responses are automatically sampled to include a limited number of items in arrays. You can control this with the `max_items` parameter:
-
-```json
-{
-  "query": "apache country:US",
-  "max_items": 10
-}
-```
-
-### Field Selection
-
-You can specify which fields to include in the results using the `fields` parameter:
-
-```json
-{
-  "query": "apache country:US",
-  "fields": ["ip_str", "port", "org", "location.country_name"]
-}
-```
-
-This supports nested fields using dot notation (e.g., `location.country_name`).
-
-### Result Summarization
-
-For search results, you can request a summary instead of the full data:
-
-```json
-{
-  "query": "apache country:US",
-  "summarize": true
-}
-```
-
-This will return:
-
-- Total result count
-- Top 5 countries
-- Top 5 organizations
-- Top 5 ports
-
-## Future Enhancements
-
-Future versions of this server will include:
-
-- **Advanced Vulnerability Correlation**: Link CVEs with affected devices and potential exploits
-- **Historical Data Analysis**: Track changes in device exposure over time
-- **Internet Maps & Real-time Data**: Visualize internet-wide technology deployments
-- **Custom Filters**: Create and save specialized filters for specific technologies
-- **Threat Intelligence Integration**: Correlate Shodan data with threat feeds
-- **Reporting Capabilities**: Generate comprehensive security reports
-- **API Rate Limit Management**: Smart handling of API quotas and rate limits
-- **Geospatial Analysis**: Advanced location-based analysis of internet devices
-- **Automated Scanning**: Scheduled scans with alerting capabilities
-
-Have feature suggestions or found a bug? Please open an issue on our [GitHub repository](https://github.com/Cyreslab-AI) or contact us directly at [contact@cyreslab.ai](mailto:contact@cyreslab.ai).
+[Cyreslab.ai](https://cyreslab.ai)

@@ -17,18 +17,12 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  McpError,
-  ReadResourceRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ErrorCode, ListResourcesRequestSchema, ListToolsRequestSchema, McpError, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import axios, { AxiosInstance } from "axios";
+import { z } from "zod";
 
 // Get the Shodan API key from environment variables
-const API_KEY = process.env.SHODAN_API_KEY;
+const API_KEY = process.env.SHODAN_API_KEY || "";
 if (!API_KEY) {
   throw new Error("SHODAN_API_KEY environment variable is required");
 }
@@ -144,7 +138,7 @@ class ShodanClient {
     try {
       const response = await this.axiosInstance.get(`/shodan/host/${ip}`);
       return this.sampleResponse(response.data, maxItems, selectedFields);
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         throw new McpError(
           ErrorCode.InternalError,
@@ -171,30 +165,15 @@ class ShodanClient {
 
       const response = await this.axiosInstance.get("/shodan/host/search", { params });
       return this.sampleResponse(response.data, maxItems, selectedFields);
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Shodan API error: ${error.response?.data?.error || error.message}`
-        );
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Get vulnerability information for a CVE ID
-   */
-  async getVulnerability(cveId: string): Promise<any> {
-    try {
-      const response = await this.axiosInstance.get(`/shodan/exploit/search`, {
-        params: {
-          query: `cve:${cveId}`
+        if (error.response?.status === 401) {
+          return {
+            error: "Unauthorized: The Shodan search API requires a paid membership. Your API key does not have access to this endpoint.",
+            message: "The search functionality requires a Shodan membership subscription with API access. Please upgrade your Shodan plan to use this feature.",
+            status: 401
+          };
         }
-      });
-      return this.sampleResponse(response.data, 5);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
         throw new McpError(
           ErrorCode.InternalError,
           `Shodan API error: ${error.response?.data?.error || error.message}`
@@ -215,28 +194,15 @@ class ShodanClient {
         params: { query }
       });
       return this.sampleResponse(response.data, maxItems, selectedFields);
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Shodan API error: ${error.response?.data?.error || error.message}`
-        );
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Get DNS information for a domain
-   */
-  async getDnsInfo(domain: string): Promise<any> {
-    try {
-      const response = await this.axiosInstance.get("/dns/domain", {
-        params: { domain }
-      });
-      return this.sampleResponse(response.data, 10);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error: "Unauthorized: The Shodan search API requires a paid membership. Your API key does not have access to this endpoint.",
+            message: "The network scanning functionality requires a Shodan membership subscription with API access. Please upgrade your Shodan plan to use this feature.",
+            status: 401
+          };
+        }
         throw new McpError(
           ErrorCode.InternalError,
           `Shodan API error: ${error.response?.data?.error || error.message}`
@@ -286,8 +252,15 @@ class ShodanClient {
       }
 
       return { total: 0, certificates: [] };
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error: "Unauthorized: The Shodan search API requires a paid membership. Your API key does not have access to this endpoint.",
+            message: "The SSL certificate lookup functionality requires a Shodan membership subscription with API access. Please upgrade your Shodan plan to use this feature.",
+            status: 401
+          };
+        }
         throw new McpError(
           ErrorCode.InternalError,
           `Shodan API error: ${error.response?.data?.error || error.message}`
@@ -337,8 +310,15 @@ class ShodanClient {
       }
 
       return { total_found: 0, devices: [] };
-    } catch (error) {
+    } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error: "Unauthorized: The Shodan search API requires a paid membership. Your API key does not have access to this endpoint.",
+            message: "The IoT device search functionality requires a Shodan membership subscription with API access. Please upgrade your Shodan plan to use this feature.",
+            status: 401
+          };
+        }
         throw new McpError(
           ErrorCode.InternalError,
           `Shodan API error: ${error.response?.data?.error || error.message}`
@@ -410,479 +390,441 @@ class ShodanClient {
 }
 
 /**
- * Create the Shodan MCP server
+ * Create and configure the Shodan MCP server
  */
-class ShodanServer {
-  private server: Server;
-  private shodanClient: ShodanClient;
+async function main() {
+  // Create Shodan client
+  const shodanClient = new ShodanClient(API_KEY);
 
-  constructor(apiKey: string) {
-    this.server = new Server(
-      {
-        name: "mcp-shodan-server",
-        version: "0.1.0",
+  // Create MCP server
+  const server = new Server(
+    {
+      name: "mcp-shodan-server",
+      version: "0.2.0"
+    },
+    {
+      capabilities: {
+        resources: {},
+        tools: {},
       },
-      {
-        capabilities: {
-          resources: {},
-          tools: {},
-        },
+    }
+  );
+
+  // Set up resource handlers
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    return {
+      resources: [
+        {
+          uri: "shodan://host/example",
+          name: "Host Information",
+          description: "Information about a specific IP address from Shodan",
+          mimeType: "application/json"
+        }
+      ]
+    };
+  });
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
+    const uri = request.params.uri;
+
+    // Host information resource
+    const hostMatch = uri.match(/^shodan:\/\/host\/([^/]+)$/);
+    if (hostMatch) {
+      const ip = decodeURIComponent(hostMatch[1]);
+      try {
+        const hostInfo = await shodanClient.getHostInfo(ip);
+        return {
+          contents: [{
+            uri: uri,
+            text: JSON.stringify(hostInfo, null, 2),
+            mimeType: "application/json"
+          }]
+        };
+      } catch (error) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Error getting host info: ${(error as Error).message}`
+        );
       }
+    }
+
+    throw new McpError(
+      ErrorCode.InvalidRequest,
+      `Invalid URI format: ${uri}`
     );
+  });
 
-    this.shodanClient = new ShodanClient(apiKey);
-
-    this.setupResourceHandlers();
-    this.setupToolHandlers();
-
-    // Error handling
-    this.server.onerror = (error) => console.error("[MCP Error]", error);
-    process.on("SIGINT", async () => {
-      await this.server.close();
-      process.exit(0);
-    });
-  }
-
-  /**
-   * Set up resource handlers
-   * For now, we're not implementing any static resources
-   */
-  private setupResourceHandlers() {
-    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
-      return {
-        resources: []
-      };
-    });
-
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        `Invalid URI: ${request.params.uri}`
-      );
-    });
-  }
-
-  /**
-   * Set up tool handlers for Shodan API functionality
-   */
-  private setupToolHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          {
-            name: "get_host_info",
-            description: "Get detailed information about a specific IP address",
-            inputSchema: {
-              type: "object",
-              properties: {
-                ip: {
-                  type: "string",
-                  description: "IP address to look up"
-                },
-                max_items: {
-                  type: "number",
-                  description: "Maximum number of items to include in arrays (default: 5)"
-                },
-                fields: {
-                  type: "array",
-                  items: {
-                    type: "string"
-                  },
-                  description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
-                }
+  // Set up tool handlers
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "get_host_info",
+          description: "Get detailed information about a specific IP address",
+          inputSchema: {
+            type: "object",
+            properties: {
+              ip: {
+                type: "string",
+                description: "IP address to look up"
               },
-              required: ["ip"]
-            }
-          },
-          {
-            name: "search_shodan",
-            description: "Search Shodan's database for devices and services",
-            inputSchema: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "Shodan search query (e.g., 'apache country:US')"
-                },
-                page: {
-                  type: "number",
-                  description: "Page number for results pagination (default: 1)"
-                },
-                facets: {
-                  type: "array",
-                  items: {
-                    type: "string"
-                  },
-                  description: "List of facets to include in the search results (e.g., ['country', 'org'])"
-                },
-                max_items: {
-                  type: "number",
-                  description: "Maximum number of items to include in arrays (default: 5)"
-                },
-                fields: {
-                  type: "array",
-                  items: {
-                    type: "string"
-                  },
-                  description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
-                },
-                summarize: {
-                  type: "boolean",
-                  description: "Whether to return a summary of the results instead of the full data (default: false)"
-                }
+              max_items: {
+                type: "number",
+                description: "Maximum number of items to include in arrays (default: 5)"
               },
-              required: ["query"]
-            }
-          },
-          {
-            name: "get_vulnerabilities",
-            description: "Get vulnerability information for a specific CVE ID",
-            inputSchema: {
-              type: "object",
-              properties: {
-                cve: {
-                  type: "string",
-                  description: "CVE ID (e.g., CVE-2021-44228)"
-                }
-              },
-              required: ["cve"]
-            }
-          },
-          {
-            name: "scan_network_range",
-            description: "Scan a network range (CIDR notation) for devices",
-            inputSchema: {
-              type: "object",
-              properties: {
-                cidr: {
-                  type: "string",
-                  description: "Network range in CIDR notation (e.g., 192.168.1.0/24)"
+              fields: {
+                type: "array",
+                items: {
+                  type: "string"
                 },
-                max_items: {
-                  type: "number",
-                  description: "Maximum number of items to include in results (default: 5)"
-                },
-                fields: {
-                  type: "array",
-                  items: {
-                    type: "string"
-                  },
-                  description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
-                }
-              },
-              required: ["cidr"]
-            }
-          },
-          {
-            name: "get_dns_info",
-            description: "Get DNS information for a domain",
-            inputSchema: {
-              type: "object",
-              properties: {
-                domain: {
-                  type: "string",
-                  description: "Domain name to look up (e.g., example.com)"
-                }
-              },
-              required: ["domain"]
-            }
-          },
-          {
-            name: "get_ssl_info",
-            description: "Get SSL certificate information for a domain",
-            inputSchema: {
-              type: "object",
-              properties: {
-                domain: {
-                  type: "string",
-                  description: "Domain name to look up SSL certificates for (e.g., example.com)"
-                }
-              },
-              required: ["domain"]
-            }
-          },
-          {
-            name: "search_iot_devices",
-            description: "Search for specific types of IoT devices",
-            inputSchema: {
-              type: "object",
-              properties: {
-                device_type: {
-                  type: "string",
-                  description: "Type of IoT device to search for (e.g., 'webcam', 'router', 'smart tv')"
-                },
-                country: {
-                  type: "string",
-                  description: "Optional country code to limit search (e.g., 'US', 'DE')"
-                },
-                max_items: {
-                  type: "number",
-                  description: "Maximum number of items to include in results (default: 5)"
-                }
-              },
-              required: ["device_type"]
-            }
+                description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
+              }
+            },
+            required: ["ip"]
           }
-        ]
-      };
-    });
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      switch (request.params.name) {
-        case "get_host_info": {
-          const ip = String(request.params.arguments?.ip);
-          if (!ip) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "IP address is required"
-            );
+        },
+        {
+          name: "search_shodan",
+          description: "Search Shodan's database for devices and services",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "Shodan search query (e.g., 'apache country:US')"
+              },
+              page: {
+                type: "number",
+                description: "Page number for results pagination (default: 1)"
+              },
+              facets: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "List of facets to include in the search results (e.g., ['country', 'org'])"
+              },
+              max_items: {
+                type: "number",
+                description: "Maximum number of items to include in arrays (default: 5)"
+              },
+              fields: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
+              },
+              summarize: {
+                type: "boolean",
+                description: "Whether to return a summary of the results instead of the full data (default: false)"
+              }
+            },
+            required: ["query"]
           }
-
-          const maxItems = Number(request.params.arguments?.max_items) || 5;
-          const fields = Array.isArray(request.params.arguments?.fields)
-            ? request.params.arguments?.fields.map(String)
-            : undefined;
-
-          try {
-            const hostInfo = await this.shodanClient.getHostInfo(ip, maxItems, fields);
-            return {
-              content: [{
-                type: "text",
-                text: JSON.stringify(hostInfo, null, 2)
-              }]
-            };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error getting host info: ${(error as Error).message}`
-            );
+        },
+        {
+          name: "scan_network_range",
+          description: "Scan a network range (CIDR notation) for devices",
+          inputSchema: {
+            type: "object",
+            properties: {
+              cidr: {
+                type: "string",
+                description: "Network range in CIDR notation (e.g., 192.168.1.0/24)"
+              },
+              max_items: {
+                type: "number",
+                description: "Maximum number of items to include in results (default: 5)"
+              },
+              fields: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "List of fields to include in the results (e.g., ['ip_str', 'ports', 'location.country_name'])"
+              }
+            },
+            required: ["cidr"]
+          }
+        },
+        {
+          name: "get_ssl_info",
+          description: "Get SSL certificate information for a domain",
+          inputSchema: {
+            type: "object",
+            properties: {
+              domain: {
+                type: "string",
+                description: "Domain name to look up SSL certificates for (e.g., example.com)"
+              }
+            },
+            required: ["domain"]
+          }
+        },
+        {
+          name: "search_iot_devices",
+          description: "Search for specific types of IoT devices",
+          inputSchema: {
+            type: "object",
+            properties: {
+              device_type: {
+                type: "string",
+                description: "Type of IoT device to search for (e.g., 'webcam', 'router', 'smart tv')"
+              },
+              country: {
+                type: "string",
+                description: "Optional country code to limit search (e.g., 'US', 'DE')"
+              },
+              max_items: {
+                type: "number",
+                description: "Maximum number of items to include in results (default: 5)"
+              }
+            },
+            required: ["device_type"]
           }
         }
+      ]
+    };
+  });
 
-        case "search_shodan": {
-          const query = String(request.params.arguments?.query);
-          if (!query) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "Search query is required"
-            );
+  server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
+    switch (request.params.name) {
+      case "get_host_info": {
+        const ip = String(request.params.arguments?.ip);
+        if (!ip) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "IP address is required"
+          );
+        }
+
+        const maxItems = Number(request.params.arguments?.max_items) || 5;
+        const fields = Array.isArray(request.params.arguments?.fields)
+          ? request.params.arguments?.fields.map(String)
+          : undefined;
+
+        try {
+          const hostInfo = await shodanClient.getHostInfo(ip, maxItems, fields);
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(hostInfo, null, 2)
+            }]
+          };
+        } catch (error) {
+          if (error instanceof McpError) {
+            throw error;
           }
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Error getting host info: ${(error as Error).message}`
+          );
+        }
+      }
 
-          const page = Number(request.params.arguments?.page) || 1;
-          const facets = Array.isArray(request.params.arguments?.facets)
-            ? request.params.arguments?.facets.map(String)
-            : [];
-          const maxItems = Number(request.params.arguments?.max_items) || 5;
-          const fields = Array.isArray(request.params.arguments?.fields)
-            ? request.params.arguments?.fields.map(String)
-            : undefined;
-          const summarize = Boolean(request.params.arguments?.summarize);
+      case "search_shodan": {
+        const query = String(request.params.arguments?.query);
+        if (!query) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "Search query is required"
+          );
+        }
 
-          try {
-            const searchResults = await this.shodanClient.search(query, page, facets, maxItems, fields);
+        const page = Number(request.params.arguments?.page) || 1;
+        const facets = Array.isArray(request.params.arguments?.facets)
+          ? request.params.arguments?.facets.map(String)
+          : [];
+        const maxItems = Number(request.params.arguments?.max_items) || 5;
+        const fields = Array.isArray(request.params.arguments?.fields)
+          ? request.params.arguments?.fields.map(String)
+          : undefined;
+        const summarize = Boolean(request.params.arguments?.summarize);
 
-            if (summarize) {
-              const summary = this.shodanClient.summarizeResults(searchResults);
-              return {
-                content: [{
-                  type: "text",
-                  text: JSON.stringify(summary, null, 2)
-                }]
-              };
-            }
+        try {
+          const searchResults = await shodanClient.search(query, page, facets, maxItems, fields);
 
+          // Check if we got an error response from the search method
+          if (searchResults.error && searchResults.status === 401) {
             return {
               content: [{
                 type: "text",
                 text: JSON.stringify(searchResults, null, 2)
               }]
             };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error searching Shodan: ${(error as Error).message}`
-            );
-          }
-        }
-
-        case "get_vulnerabilities": {
-          const cve = String(request.params.arguments?.cve);
-          if (!cve) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "CVE ID is required"
-            );
           }
 
-          try {
-            const vulnInfo = await this.shodanClient.getVulnerability(cve);
+          if (summarize) {
+            const summary = shodanClient.summarizeResults(searchResults);
             return {
               content: [{
                 type: "text",
-                text: JSON.stringify(vulnInfo, null, 2)
+                text: JSON.stringify(summary, null, 2)
               }]
             };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error getting vulnerability info: ${(error as Error).message}`
-            );
           }
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(searchResults, null, 2)
+            }]
+          };
+        } catch (error) {
+          if (error instanceof McpError) {
+            throw error;
+          }
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Error searching Shodan: ${(error as Error).message}`
+          );
+        }
+      }
+
+      case "scan_network_range": {
+        const cidr = String(request.params.arguments?.cidr);
+        if (!cidr) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "CIDR notation is required"
+          );
         }
 
-        case "scan_network_range": {
-          const cidr = String(request.params.arguments?.cidr);
-          if (!cidr) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "CIDR notation is required"
-            );
-          }
+        const maxItems = Number(request.params.arguments?.max_items) || 5;
+        const fields = Array.isArray(request.params.arguments?.fields)
+          ? request.params.arguments?.fields.map(String)
+          : undefined;
 
-          const maxItems = Number(request.params.arguments?.max_items) || 5;
-          const fields = Array.isArray(request.params.arguments?.fields)
-            ? request.params.arguments?.fields.map(String)
-            : undefined;
+        try {
+          const scanResults = await shodanClient.scanNetworkRange(cidr, maxItems, fields);
 
-          try {
-            const scanResults = await this.shodanClient.scanNetworkRange(cidr, maxItems, fields);
+          // Check if we got an error response from the scan method
+          if (scanResults.error && scanResults.status === 401) {
             return {
               content: [{
                 type: "text",
                 text: JSON.stringify(scanResults, null, 2)
               }]
             };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error scanning network range: ${(error as Error).message}`
-            );
           }
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(scanResults, null, 2)
+            }]
+          };
+        } catch (error) {
+          if (error instanceof McpError) {
+            throw error;
+          }
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Error scanning network range: ${(error as Error).message}`
+          );
+        }
+      }
+
+      case "get_ssl_info": {
+        const domain = String(request.params.arguments?.domain);
+        if (!domain) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "Domain name is required"
+          );
         }
 
-        case "get_dns_info": {
-          const domain = String(request.params.arguments?.domain);
-          if (!domain) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "Domain name is required"
-            );
-          }
+        try {
+          const sslInfo = await shodanClient.getSslInfo(domain);
 
-          try {
-            const dnsInfo = await this.shodanClient.getDnsInfo(domain);
-            return {
-              content: [{
-                type: "text",
-                text: JSON.stringify(dnsInfo, null, 2)
-              }]
-            };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error getting DNS information: ${(error as Error).message}`
-            );
-          }
-        }
-
-        case "get_ssl_info": {
-          const domain = String(request.params.arguments?.domain);
-          if (!domain) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "Domain name is required"
-            );
-          }
-
-          try {
-            const sslInfo = await this.shodanClient.getSslInfo(domain);
+          // Check if we got an error response from the SSL info method
+          if (sslInfo.error && sslInfo.status === 401) {
             return {
               content: [{
                 type: "text",
                 text: JSON.stringify(sslInfo, null, 2)
               }]
             };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error getting SSL certificate information: ${(error as Error).message}`
-            );
           }
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(sslInfo, null, 2)
+            }]
+          };
+        } catch (error) {
+          if (error instanceof McpError) {
+            throw error;
+          }
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Error getting SSL certificate information: ${(error as Error).message}`
+          );
+        }
+      }
+
+      case "search_iot_devices": {
+        const deviceType = String(request.params.arguments?.device_type);
+        if (!deviceType) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "Device type is required"
+          );
         }
 
-        case "search_iot_devices": {
-          const deviceType = String(request.params.arguments?.device_type);
-          if (!deviceType) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              "Device type is required"
-            );
-          }
+        const country = request.params.arguments?.country
+          ? String(request.params.arguments.country)
+          : undefined;
+        const maxItems = Number(request.params.arguments?.max_items) || 5;
 
-          const country = request.params.arguments?.country
-            ? String(request.params.arguments.country)
-            : undefined;
-          const maxItems = Number(request.params.arguments?.max_items) || 5;
+        try {
+          const iotDevices = await shodanClient.searchIotDevices(deviceType, country, maxItems);
 
-          try {
-            const iotDevices = await this.shodanClient.searchIotDevices(deviceType, country, maxItems);
+          // Check if we got an error response from the IoT devices search method
+          if (iotDevices.error && iotDevices.status === 401) {
             return {
               content: [{
                 type: "text",
                 text: JSON.stringify(iotDevices, null, 2)
               }]
             };
-          } catch (error) {
-            if (error instanceof McpError) {
-              throw error;
-            }
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Error searching for IoT devices: ${(error as Error).message}`
-            );
           }
-        }
 
-        default:
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(iotDevices, null, 2)
+            }]
+          };
+        } catch (error) {
+          if (error instanceof McpError) {
+            throw error;
+          }
           throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Unknown tool: ${request.params.name}`
+            ErrorCode.InternalError,
+            `Error searching for IoT devices: ${(error as Error).message}`
           );
+        }
       }
-    });
-  }
 
-  /**
-   * Start the server
-   */
-  async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error("Shodan MCP server running on stdio");
-  }
+      default:
+        throw new McpError(
+          ErrorCode.MethodNotFound,
+          `Unknown tool: ${request.params.name}`
+        );
+    }
+  });
+
+  // Start the server
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("Shodan MCP server running on stdio");
 }
 
-// Create and start the server
-const server = new ShodanServer(API_KEY);
-server.run().catch((error) => {
+// Run the server
+main().catch((error) => {
   console.error("Server error:", error);
   process.exit(1);
 });
