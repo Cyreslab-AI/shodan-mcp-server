@@ -1,3 +1,4 @@
+![Logo](logo.png)
 # Shodan MCP Server
 
 A Model Context Protocol (MCP) server that provides access to Shodan API functionality and CVE database, allowing AI assistants to query information about internet-connected devices, services, and vulnerabilities.
