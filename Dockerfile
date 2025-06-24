@@ -10,7 +10,7 @@ USER service-user
 
 WORKDIR /app
 
-RUN git clone https://github.com/Cyreslab-AI/shodan-mcp-server . && git checkout 935f7044f60570cf2d094d94596eeea7872fb6be
+RUN git clone https://github.com/Cyreslab-AI/shodan-mcp-server .
 
 RUN (pnpm install || true) && (pnpm run build || true)
 

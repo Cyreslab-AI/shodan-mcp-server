@@ -1,6 +1,33 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
-  "maintainers": [
-    "vinerya"
+  "name": "shodan-mcp-server",
+  "version": "0.2.0",
+  "description": "Comprehensive Shodan MCP server with 23 cybersecurity intelligence tools for network reconnaissance, vulnerability research, and threat intelligence",
+  "maintainers": ["vinerya"],
+  "author": "Cyreslab.ai",
+  "homepage": "https://github.com/Cyreslab-AI/shodan-mcp-server",
+  "license": "MIT",
+  "keywords": ["shodan", "cybersecurity", "network-scanning", "vulnerability", "threat-intelligence", "dns", "ssl", "iot", "cve"],
+  "categories": ["security", "network", "vulnerability", "intelligence"],
+  "tools": {
+    "count": 23,
+    "categories": {
+      "network": ["get_host_info", "search_shodan", "scan_network_range", "search_iot_devices", "get_host_count"],
+      "ssl": ["get_ssl_info"],
+      "dns": ["dns_lookup", "reverse_dns_lookup", "get_domain_info"],
+      "vulnerability": ["get_cve_info", "search_cves", "get_cpes", "get_newest_cves", "get_kev_cves", "get_cves_by_epss"],
+      "utility": ["list_search_facets", "list_search_filters", "parse_search_tokens", "list_ports", "list_protocols", "get_api_info", "get_account_profile", "get_my_ip"]
+    }
+  },
+  "features": [
+    "23 comprehensive cybersecurity tools",
+    "Shodan API integration",
+    "CVE database access (free)",
+    "Network reconnaissance",
+    "SSL certificate analysis",
+    "DNS intelligence",
+    "IoT device discovery",
+    "Vulnerability research",
+    "Response optimization and sampling"
   ]
 }
