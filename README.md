@@ -313,4 +313,4 @@ MIT
 ## Citation
 If you use this project in your research or publications, please cite it as follows:
 
-<pre> ```bibtex @misc{shodanmcp2025, author = {Bassem Abidi and Moudather Chelbi}, title = {Shodan MCP Server}, year = {2025}, howpublished = {https://github.com/Cyreslab-AI/shodan-mcp-server}, note = {Accessed: 2025-06-29} } ``` </pre>
+```bibtex @misc{shodanmcp2025, author = {Bassem Abidi and Moudather Chelbi}, title = {Shodan MCP Server}, year = {2025}, howpublished = {https://github.com/Cyreslab-AI/shodan-mcp-server}, note = {Accessed: 2025-06-29} } ```
