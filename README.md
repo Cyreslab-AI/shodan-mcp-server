@@ -318,4 +318,4 @@ author = {Bassem Abidi and Moudather Chelbi},
 title = {Shodan MCP Server},
 year = {2025},
 howpublished = {https://github.com/Cyreslab-AI/shodan-mcp-server},
-note = {Accessed: 2025-06-29} } ```
+note = {Accessed: 2025-06-29}} ```
