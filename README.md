@@ -309,3 +309,13 @@ MIT
 ## Developed by
 
 [Cyreslab.ai](https://cyreslab.ai)
+
+## Citation
+If you use this project in your research or publications, please cite it as follows:
+
+<pre><code>@misc{yourproject2025,
+  authors       = {Bassem Abidi, Moudather Chelbi},
+  title        = {Shodan MCP Server},
+  year         = {2025},
+  howpublished = {https://github.com/Cyreslab-AI/shodan-mcp-server},
+}</code></pre>
