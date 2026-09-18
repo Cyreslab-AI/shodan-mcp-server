@@ -986,6 +986,39 @@ async function main() {
             },
             required: ["ip"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              ip_str: { type: "string" },
+              ports: { type: "array", items: { type: "number" } },
+              hostnames: { type: "array", items: { type: "string" } },
+              domains: { type: "array", items: { type: "string" } },
+              org: { type: "string" },
+              isp: { type: "string" },
+              asn: { type: "string" },
+              country_name: { type: "string" },
+              country_code: { type: "string" },
+              city: { type: "string" },
+              region_code: { type: "string" },
+              latitude: { type: "number" },
+              longitude: { type: "number" },
+              last_update: { type: "string" },
+              os: { type: ["string", "null"] },
+              tags: { type: "array", items: { type: "string" } },
+              vulns: { type: "array", items: { type: "string" } },
+              data: {
+                type: "array",
+                description: "Banner/service data for each open port",
+                items: { type: "object", additionalProperties: true },
+              },
+              _sample_note: {
+                type: "string",
+                description: "Present when results were truncated",
+              },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "search_shodan",
@@ -1030,6 +1063,66 @@ async function main() {
             },
             required: ["query"],
           },
+          outputSchema: {
+            type: "object",
+            description:
+              "Raw search results, or a summary when summarize=true, or an error object when the API key lacks search access",
+            properties: {
+              total: { type: "number" },
+              matches: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+              facets: { type: "object", additionalProperties: true },
+              _sample_note: { type: "string" },
+              total_results: {
+                type: "number",
+                description: "Present when summarize=true",
+              },
+              sample_size: {
+                type: "number",
+                description: "Present when summarize=true",
+              },
+              top_countries: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    count: { type: "number" },
+                  },
+                },
+              },
+              top_organizations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    count: { type: "number" },
+                  },
+                },
+              },
+              top_ports: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    port: { type: "number" },
+                    count: { type: "number" },
+                  },
+                },
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "scan_network_range",
@@ -1058,6 +1151,25 @@ async function main() {
             },
             required: ["cidr"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              total: { type: "number" },
+              matches: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+              _sample_note: { type: "string" },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_ssl_info",
@@ -1073,6 +1185,41 @@ async function main() {
             },
             required: ["domain"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              total: { type: "number" },
+              certificates: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    ip: { type: "string" },
+                    port: { type: "number" },
+                    subject: { type: "object", additionalProperties: true },
+                    issuer: { type: "object", additionalProperties: true },
+                    expires: { type: "string" },
+                    issued: { type: "string" },
+                    fingerprint: {
+                      type: "object",
+                      additionalProperties: true,
+                    },
+                    cipher: { type: "object", additionalProperties: true },
+                    version: { type: ["string", "number"] },
+                  },
+                  additionalProperties: true,
+                },
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "search_iot_devices",
@@ -1098,6 +1245,41 @@ async function main() {
             },
             required: ["device_type"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              total_found: { type: "number" },
+              sample_size: { type: "number" },
+              devices: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    ip: { type: "string" },
+                    port: { type: "number" },
+                    organization: { type: "string" },
+                    location: { type: "object", additionalProperties: true },
+                    hostnames: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                    product: { type: "string" },
+                    version: { type: "string" },
+                    timestamp: { type: "string" },
+                  },
+                  additionalProperties: true,
+                },
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_host_count",
@@ -1121,6 +1303,21 @@ async function main() {
             },
             required: ["query"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              total: { type: "number" },
+              facets: { type: "object", additionalProperties: true },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "list_search_facets",
@@ -1130,6 +1327,14 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              facets: { type: "array", items: { type: "string" } },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "list_search_filters",
@@ -1139,6 +1344,14 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              filters: { type: "array", items: { type: "string" } },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "parse_search_tokens",
@@ -1154,6 +1367,17 @@ async function main() {
             },
             required: ["query"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              string: { type: "string" },
+              attributes: { type: "object", additionalProperties: true },
+              filters: { type: "object", additionalProperties: true },
+              errors: { type: "array", items: { type: "string" } },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "list_ports",
@@ -1162,6 +1386,14 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              ports: { type: "array", items: { type: "number" } },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "list_protocols",
@@ -1171,6 +1403,18 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              protocols: {
+                type: "object",
+                description: "Map of protocol name to description",
+                additionalProperties: { type: "string" },
+              },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_api_info",
@@ -1180,6 +1424,21 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              scan_credits: { type: "number" },
+              query_credits: { type: "number" },
+              monitored_ips: { type: ["number", "null"] },
+              unlocked: { type: "boolean" },
+              unlocked_left: { type: "number" },
+              telnet: { type: "boolean" },
+              plan: { type: "string" },
+              https: { type: "boolean" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_my_ip",
@@ -1188,6 +1447,14 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              ip: { type: "string" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "dns_lookup",
@@ -1206,6 +1473,13 @@ async function main() {
             },
             required: ["hostnames"],
           },
+          outputSchema: {
+            type: "object",
+            description:
+              "Map of each requested hostname to its resolved IP address (or null if unresolved)",
+            additionalProperties: { type: ["string", "null"] },
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "reverse_dns_lookup",
@@ -1225,6 +1499,16 @@ async function main() {
             },
             required: ["ips"],
           },
+          outputSchema: {
+            type: "object",
+            description:
+              "Map of each requested IP address to an array of hostnames",
+            additionalProperties: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_domain_info",
@@ -1253,6 +1537,36 @@ async function main() {
             },
             required: ["domain"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              domain: { type: "string" },
+              tags: { type: "array", items: { type: "string" } },
+              subdomains: { type: "array", items: { type: "string" } },
+              more: { type: "boolean" },
+              data: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    subdomain: { type: "string" },
+                    type: { type: "string" },
+                    value: { type: "string" },
+                    last_seen: { type: "string" },
+                  },
+                  additionalProperties: true,
+                },
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_account_profile",
@@ -1262,6 +1576,17 @@ async function main() {
             type: "object",
             properties: {},
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              member: { type: "boolean" },
+              credits: { type: "number" },
+              display_name: { type: ["string", "null"] },
+              created: { type: "string" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_cve_info",
@@ -1276,6 +1601,33 @@ async function main() {
             },
             required: ["cve_id"],
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              cve_id: { type: "string" },
+              summary: { type: "string" },
+              cvss: { type: ["number", "null"] },
+              cvss_version: { type: ["number", "null"] },
+              cvss_v2: { type: ["number", "null"] },
+              cvss_v3: { type: ["number", "null"] },
+              epss: { type: ["number", "null"] },
+              ranking_epss: { type: ["number", "null"] },
+              kev: { type: "boolean" },
+              propose_action: { type: ["string", "null"] },
+              ransomware_campaign: { type: ["string", "null"] },
+              references: { type: "array", items: { type: "string" } },
+              published_time: { type: "string" },
+              cpes: { type: "array", items: { type: "string" } },
+              error: {
+                type: "string",
+                description: "Present when the CVE was not found",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "search_cves",
@@ -1323,6 +1675,17 @@ async function main() {
               },
             },
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              cves: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_cpes",
@@ -1357,6 +1720,15 @@ async function main() {
               },
             },
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              cpes: { type: "array", items: { type: "string" } },
+              total: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_newest_cves",
@@ -1371,6 +1743,17 @@ async function main() {
               },
             },
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              cves: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_kev_cves",
@@ -1385,6 +1768,17 @@ async function main() {
               },
             },
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              cves: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
         {
           name: "get_cves_by_epss",
@@ -1400,6 +1794,17 @@ async function main() {
               },
             },
           },
+          outputSchema: {
+            type: "object",
+            properties: {
+              cves: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
         },
       ],
     };
@@ -1430,6 +1835,7 @@ async function main() {
                 text: JSON.stringify(hostInfo, null, 2),
               },
             ],
+            structuredContent: hostInfo,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1479,6 +1885,7 @@ async function main() {
                   text: JSON.stringify(searchResults, null, 2),
                 },
               ],
+              structuredContent: searchResults,
             };
           }
 
@@ -1491,6 +1898,7 @@ async function main() {
                   text: JSON.stringify(summary, null, 2),
                 },
               ],
+              structuredContent: summary,
             };
           }
 
@@ -1501,6 +1909,7 @@ async function main() {
                 text: JSON.stringify(searchResults, null, 2),
               },
             ],
+            structuredContent: searchResults,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1543,6 +1952,7 @@ async function main() {
                   text: JSON.stringify(scanResults, null, 2),
                 },
               ],
+              structuredContent: scanResults,
             };
           }
 
@@ -1553,6 +1963,7 @@ async function main() {
                 text: JSON.stringify(scanResults, null, 2),
               },
             ],
+            structuredContent: scanResults,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1586,6 +1997,7 @@ async function main() {
                   text: JSON.stringify(sslInfo, null, 2),
                 },
               ],
+              structuredContent: sslInfo,
             };
           }
 
@@ -1596,6 +2008,7 @@ async function main() {
                 text: JSON.stringify(sslInfo, null, 2),
               },
             ],
+            structuredContent: sslInfo,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1638,6 +2051,7 @@ async function main() {
                   text: JSON.stringify(iotDevices, null, 2),
                 },
               ],
+              structuredContent: iotDevices,
             };
           }
 
@@ -1648,6 +2062,7 @@ async function main() {
                 text: JSON.stringify(iotDevices, null, 2),
               },
             ],
+            structuredContent: iotDevices,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1685,6 +2100,7 @@ async function main() {
                   text: JSON.stringify(hostCount, null, 2),
                 },
               ],
+              structuredContent: hostCount,
             };
           }
 
@@ -1695,6 +2111,7 @@ async function main() {
                 text: JSON.stringify(hostCount, null, 2),
               },
             ],
+            structuredContent: hostCount,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1717,6 +2134,7 @@ async function main() {
                 text: JSON.stringify(facets, null, 2),
               },
             ],
+            structuredContent: facets,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1739,6 +2157,7 @@ async function main() {
                 text: JSON.stringify(filters, null, 2),
               },
             ],
+            structuredContent: filters,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1769,6 +2188,7 @@ async function main() {
                 text: JSON.stringify(tokens, null, 2),
               },
             ],
+            structuredContent: tokens,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1791,6 +2211,7 @@ async function main() {
                 text: JSON.stringify(ports, null, 2),
               },
             ],
+            structuredContent: ports,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1813,6 +2234,7 @@ async function main() {
                 text: JSON.stringify(protocols, null, 2),
               },
             ],
+            structuredContent: protocols,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1835,6 +2257,7 @@ async function main() {
                 text: JSON.stringify(apiInfo, null, 2),
               },
             ],
+            structuredContent: apiInfo,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1857,6 +2280,7 @@ async function main() {
                 text: JSON.stringify(myIp, null, 2),
               },
             ],
+            structuredContent: myIp,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1889,6 +2313,7 @@ async function main() {
                 text: JSON.stringify(dnsResults, null, 2),
               },
             ],
+            structuredContent: dnsResults,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1921,6 +2346,7 @@ async function main() {
                 text: JSON.stringify(reverseDnsResults, null, 2),
               },
             ],
+            structuredContent: reverseDnsResults,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1965,6 +2391,7 @@ async function main() {
                   text: JSON.stringify(domainInfo, null, 2),
                 },
               ],
+              structuredContent: domainInfo,
             };
           }
 
@@ -1975,6 +2402,7 @@ async function main() {
                 text: JSON.stringify(domainInfo, null, 2),
               },
             ],
+            structuredContent: domainInfo,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -1997,6 +2425,7 @@ async function main() {
                 text: JSON.stringify(accountProfile, null, 2),
               },
             ],
+            structuredContent: accountProfile,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -2027,6 +2456,7 @@ async function main() {
                 text: JSON.stringify(cveInfo, null, 2),
               },
             ],
+            structuredContent: cveInfo,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -2076,6 +2506,7 @@ async function main() {
                 text: JSON.stringify(cveResults, null, 2),
               },
             ],
+            structuredContent: cveResults,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -2116,6 +2547,7 @@ async function main() {
                 text: JSON.stringify(cpeResults, null, 2),
               },
             ],
+            structuredContent: cpeResults,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -2142,6 +2574,7 @@ async function main() {
                 text: JSON.stringify(newestCves, null, 2),
               },
             ],
+            structuredContent: newestCves,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -2168,6 +2601,7 @@ async function main() {
                 text: JSON.stringify(kevCves, null, 2),
               },
             ],
+            structuredContent: kevCves,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
@@ -2194,6 +2628,7 @@ async function main() {
                 text: JSON.stringify(epssCves, null, 2),
               },
             ],
+            structuredContent: epssCves,
           };
         } catch (error) {
           if (error instanceof ProtocolError) {
