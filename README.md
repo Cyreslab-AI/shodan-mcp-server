@@ -20,6 +20,13 @@ A Model Context Protocol (MCP) server that provides access to Shodan API functio
 - **CPE Information**: Get Common Platform Enumeration data for products
 - **Latest Vulnerabilities**: Access newest CVEs and Known Exploited Vulnerabilities
 - **Exploit Prediction**: Get CVEs sorted by EPSS exploit prediction scores
+- **Exploit Search**: Search Shodan's Exploits database for CVE-linked exploits
+- **InternetDB Lookup**: Free, no-API-key host lookup (open ports, hostnames, CPEs, vulns, tags)
+
+### Network Monitoring
+
+- **Network Alerts**: Create, list, inspect, and delete persistent alerts that monitor IPs/ranges for changes
+- **Notifiers**: List available notifier providers and manage notifiers (Slack, email, webhook, etc.) that alerts can send events to
 
 ## Installation
 
@@ -267,6 +274,103 @@ Get CVEs sorted by EPSS score (Exploit Prediction Scoring System).
 
 - `limit` (optional): Maximum number of results to return (default: 10)
 
+#### get_internetdb_host
+
+Get a free, lightweight lookup of an IP address using Shodan's InternetDB (open ports, hostnames, CPEs, vulnerabilities, tags). **No API key required.**
+
+**Parameters:**
+
+- `ip` (required): IP address to look up (e.g., '8.8.8.8')
+
+#### search_exploits
+
+Search Shodan's Exploits database (Exploit-DB, Metasploit, CVE-linked exploits) for known exploits.
+
+**Parameters:**
+
+- `query` (required): Exploits search query (e.g., 'apache cve:2021-44228')
+- `page` (optional): Page number for results pagination (default: 1)
+- `facets` (optional): List of facets to include in the results (e.g., ['type', 'platform'])
+
+**Note:** As of this writing, the upstream `exploits.shodan.io` host redirects to `cvedb.shodan.io` and no longer serves this API. The tool detects this and returns a clean `{"error": "Unexpected response from the Shodan Exploits API", ...}` object rather than crashing, in case Shodan restores the endpoint.
+
+#### count_exploits
+
+Get the count of exploits matching a search query without returning the full exploit records.
+
+**Parameters:**
+
+- `query` (required): Exploits search query to count results for
+- `facets` (optional): List of facets to include in the count results (e.g., ['type', 'platform'])
+
+### Network Alert Tools
+
+#### create_alert
+
+Create a persistent Shodan network alert that monitors one or more IPs/ranges and reports changes over time. **This is not a read-only action.**
+
+**Parameters:**
+
+- `name` (required): Descriptive name for the alert
+- `ip` (required): List of IPs or CIDR ranges to monitor (e.g., ['1.2.3.4', '10.0.0.0/24'])
+- `expires` (optional): Number of seconds the alert should stay active before automatically expiring (omit for no expiration)
+
+#### list_alerts
+
+List all configured Shodan network alerts on the account.
+
+**Parameters:**
+
+- `include_expired` (optional): Whether to include expired alerts in the results (default: true)
+
+#### get_alert
+
+Get details about a specific Shodan network alert by ID.
+
+**Parameters:**
+
+- `alert_id` (required): ID of the alert to retrieve
+
+#### delete_alert
+
+Permanently delete a Shodan network alert by ID. **This is a destructive action and cannot be undone.**
+
+**Parameters:**
+
+- `alert_id` (required): ID of the alert to delete
+
+### Notifier Tools
+
+#### list_notifier_providers
+
+List available Shodan notifier providers (e.g. slack, email, webhook, telegram) and the arguments each one requires.
+
+**Parameters:** None
+
+#### list_notifiers
+
+List all configured Shodan notifiers on the account.
+
+**Parameters:** None
+
+#### create_notifier
+
+Create a new Shodan notifier (e.g. Slack, email, webhook) that network alerts can send events to. **This is not a read-only action.**
+
+**Parameters:**
+
+- `provider` (required): Notifier provider name (e.g. 'slack', 'email', 'webhook', 'telegram'). Use `list_notifier_providers` to see available options.
+- `args` (required): Provider-specific arguments (e.g., `{"webhook_url": "https://..."}` for slack)
+- `description` (optional): Human-readable description of the notifier
+
+#### delete_notifier
+
+Permanently delete a Shodan notifier by ID. **This is a destructive action and cannot be undone.**
+
+**Parameters:**
+
+- `notifier_id` (required): ID of the notifier to delete
+
 ### Account & Utility Tools
 
 #### get_api_info
@@ -299,8 +403,12 @@ Some Shodan API endpoints require a paid membership. The following features are 
 - Network scanning
 - SSL certificate lookup
 - IoT device search
+- Exploit search (search_exploits, count_exploits)
+- Network alerts and notifiers (create_alert, list_alerts, get_alert, delete_alert, list_notifier_providers, list_notifiers, create_notifier, delete_notifier)
 
 **Note**: CVE database functionality (get_cve_info, search_cves, get_cpes, get_newest_cves, get_kev_cves, get_cves_by_epss) is completely free and does not require a paid Shodan subscription.
+
+**Note**: `get_internetdb_host` is completely free and does not require a Shodan API key at all — it queries the public `internetdb.shodan.io` service directly. The server still requires a `SHODAN_API_KEY` environment variable to start (used by the other tools).
 
 ## License
 

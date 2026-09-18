@@ -653,6 +653,282 @@ class ShodanClient {
   }
 
   /**
+   * Create a persistent network alert that monitors IPs/ranges for changes
+   */
+  async createAlert(
+    name: string,
+    ip: string[],
+    expires?: number,
+  ): Promise<any> {
+    try {
+      const body: any = {
+        name,
+        filters: { ip },
+      };
+      if (expires !== undefined) {
+        body.expires = expires;
+      }
+
+      const response = await this.axiosInstance.post("/shodan/alert", body);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Creating Shodan network alerts requires a valid, active Shodan API key.",
+            message:
+              "Alert creation requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * List all configured network alerts on the account
+   */
+  async listAlerts(includeExpired: boolean = true): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get("/shodan/alert/info", {
+        params: { include_expired: includeExpired },
+      });
+      const alerts = Array.isArray(response.data) ? response.data : [];
+      return { count: alerts.length, alerts };
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Listing Shodan network alerts requires a valid, active Shodan API key.",
+            message:
+              "Alert management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get details about a specific network alert
+   */
+  async getAlert(alertId: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get(
+        `/shodan/alert/${alertId}/info`,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Retrieving Shodan network alerts requires a valid, active Shodan API key.",
+            message:
+              "Alert management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        if (error.response?.status === 404) {
+          return {
+            error: "Alert not found",
+            message: `No alert with id ${alertId} was found on this account.`,
+            status: 404,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Permanently delete a network alert
+   */
+  async deleteAlert(alertId: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.delete(
+        `/shodan/alert/${alertId}`,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Deleting Shodan network alerts requires a valid, active Shodan API key.",
+            message:
+              "Alert management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        if (error.response?.status === 404) {
+          return {
+            error: "Alert not found",
+            message: `No alert with id ${alertId} was found on this account.`,
+            status: 404,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * List available notifier providers (e.g. slack, email, webhook) and their required arguments
+   */
+  async listNotifierProviders(): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get("/notifier/provider");
+      return { providers: response.data };
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Listing Shodan notifier providers requires a valid, active Shodan API key.",
+            message:
+              "Notifier management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * List all configured notifiers on the account
+   */
+  async listNotifiers(): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get("/notifier");
+      const notifiers = Array.isArray(response.data?.matches)
+        ? response.data.matches
+        : [];
+      return {
+        total:
+          typeof response.data?.total === "number"
+            ? response.data.total
+            : notifiers.length,
+        notifiers,
+      };
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Listing Shodan notifiers requires a valid, active Shodan API key.",
+            message:
+              "Notifier management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new notifier that alerts can send events to
+   */
+  async createNotifier(
+    provider: string,
+    args: Record<string, any> = {},
+    description?: string,
+  ): Promise<any> {
+    try {
+      const body: any = { ...args, provider };
+      if (description) {
+        body.description = description;
+      }
+
+      const response = await this.axiosInstance.post("/notifier", body);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Creating Shodan notifiers requires a valid, active Shodan API key.",
+            message:
+              "Notifier management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Permanently delete a notifier
+   */
+  async deleteNotifier(notifierId: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.delete(
+        `/notifier/${notifierId}`,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: Deleting Shodan notifiers requires a valid, active Shodan API key.",
+            message:
+              "Notifier management requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        if (error.response?.status === 404) {
+          return {
+            error: "Notifier not found",
+            message: `No notifier with id ${notifierId} was found on this account.`,
+            status: 404,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Generate a summary of search results
    */
   summarizeResults(data: any): any {
@@ -887,6 +1163,189 @@ class CVEDBClient {
 }
 
 /**
+ * InternetDB API client class
+ *
+ * InternetDB (internetdb.shodan.io) is a free, no-API-key-required lightweight
+ * host lookup that returns open ports, hostnames, CPEs, vulnerabilities and tags.
+ */
+class InternetDBClient {
+  private axiosInstance: AxiosInstance;
+
+  constructor() {
+    this.axiosInstance = axios.create({
+      baseURL: "https://internetdb.shodan.io",
+    });
+  }
+
+  /**
+   * Get lightweight host information for an IP address (no API key required)
+   */
+  async getHost(ip: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get(`/${ip}`);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          return {
+            error: "No information available",
+            message: `InternetDB has no data for IP ${ip}.`,
+            status: 404,
+          };
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `InternetDB API error: ${error.response?.data?.detail || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+}
+
+/**
+ * Exploits API client class for exploit/CVE-linked exploit search
+ */
+class ExploitsClient {
+  private axiosInstance: AxiosInstance;
+
+  constructor(apiKey: string) {
+    this.axiosInstance = axios.create({
+      baseURL: "https://exploits.shodan.io",
+      params: {
+        key: apiKey,
+      },
+      // Do not silently follow redirects: if the exploits.shodan.io host has
+      // been moved/deprecated (it currently 301s to cvedb.shodan.io, which
+      // does not implement this API), we want a clear error instead of
+      // transparently fetching an unrelated HTML page.
+      maxRedirects: 0,
+    });
+  }
+
+  /**
+   * Build a clean error object when the API responds with something other
+   * than the documented JSON payload (e.g. an HTML page from a redirect).
+   */
+  private unexpectedResponseError(status: number, detail?: string): any {
+    return {
+      error: "Unexpected response from the Shodan Exploits API",
+      message:
+        "The Exploits API (exploits.shodan.io) did not return the expected JSON payload. " +
+        "The endpoint may have been moved, deprecated, or is temporarily unavailable." +
+        (detail ? ` Details: ${detail}` : ""),
+      status,
+    };
+  }
+
+  /**
+   * Search the Shodan Exploits archive
+   */
+  async search(
+    query: string,
+    page: number = 1,
+    facets: string[] = [],
+  ): Promise<any> {
+    try {
+      const params: any = { query, page };
+      if (facets.length > 0) {
+        params.facets = facets.join(",");
+      }
+
+      const response = await this.axiosInstance.get("/api/search", {
+        params,
+      });
+      if (
+        !response.data ||
+        typeof response.data !== "object" ||
+        Array.isArray(response.data)
+      ) {
+        return this.unexpectedResponseError(response.status);
+      }
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: The Shodan Exploits API requires a valid, active Shodan API key.",
+            message:
+              "Exploit search requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        if (
+          error.response &&
+          error.response.status >= 300 &&
+          error.response.status < 400
+        ) {
+          return this.unexpectedResponseError(
+            error.response.status,
+            `Redirected to ${error.response.headers?.location || "an unknown location"}`,
+          );
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan Exploits API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get the count of exploits matching a search query, with optional facets
+   */
+  async count(query: string, facets: string[] = []): Promise<any> {
+    try {
+      const params: any = { query };
+      if (facets.length > 0) {
+        params.facets = facets.join(",");
+      }
+
+      const response = await this.axiosInstance.get("/api/count", {
+        params,
+      });
+      if (
+        !response.data ||
+        typeof response.data !== "object" ||
+        Array.isArray(response.data)
+      ) {
+        return this.unexpectedResponseError(response.status);
+      }
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return {
+            error:
+              "Unauthorized: The Shodan Exploits API requires a valid, active Shodan API key.",
+            message:
+              "Exploit search requires a Shodan membership subscription with API access. Please check your Shodan plan and API key.",
+            status: 401,
+          };
+        }
+        if (
+          error.response &&
+          error.response.status >= 300 &&
+          error.response.status < 400
+        ) {
+          return this.unexpectedResponseError(
+            error.response.status,
+            `Redirected to ${error.response.headers?.location || "an unknown location"}`,
+          );
+        }
+        throw new ProtocolError(
+          ProtocolErrorCode.InternalError,
+          `Shodan Exploits API error: ${error.response?.data?.error || error.message}`,
+        );
+      }
+      throw error;
+    }
+  }
+}
+
+/**
  * Create and configure the Shodan MCP server
  */
 async function main() {
@@ -895,6 +1354,12 @@ async function main() {
 
   // Create CVEDB client
   const cvedbClient = new CVEDBClient();
+
+  // Create InternetDB client (free, no API key required)
+  const internetDBClient = new InternetDBClient();
+
+  // Create Exploits API client
+  const exploitsClient = new ExploitsClient(API_KEY);
 
   // Create MCP server
   const server = new Server(
@@ -1806,6 +2271,429 @@ async function main() {
           },
           annotations: { readOnlyHint: true, openWorldHint: true },
         },
+        {
+          name: "get_internetdb_host",
+          description:
+            "Get a free, lightweight lookup of an IP address using Shodan's InternetDB (open ports, hostnames, CPEs, vulnerabilities, tags). No API key required.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              ip: {
+                type: "string",
+                description: "IP address to look up (e.g., '8.8.8.8')",
+              },
+            },
+            required: ["ip"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              ip: { type: "string" },
+              ports: { type: "array", items: { type: "number" } },
+              hostnames: { type: "array", items: { type: "string" } },
+              cpes: { type: "array", items: { type: "string" } },
+              tags: { type: "array", items: { type: "string" } },
+              vulns: { type: "array", items: { type: "string" } },
+              error: {
+                type: "string",
+                description:
+                  "Present when InternetDB has no data for this IP (404)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "search_exploits",
+          description:
+            "Search Shodan's Exploits database (Exploit-DB, Metasploit, CVE-linked exploits) for known exploits",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description:
+                  "Exploits search query (e.g., 'apache cve:2021-44228')",
+              },
+              page: {
+                type: "number",
+                description: "Page number for results pagination (default: 1)",
+              },
+              facets: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "List of facets to include in the results (e.g., ['type', 'platform'])",
+              },
+            },
+            required: ["query"],
+          },
+          outputSchema: {
+            type: "object",
+            description:
+              "Raw exploit search results, or an error object when the API key is invalid or lacks access",
+            properties: {
+              total: { type: "number" },
+              matches: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+              facets: { type: "object", additionalProperties: true },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "count_exploits",
+          description:
+            "Get the count of exploits matching a search query without returning the full exploit records",
+          inputSchema: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "Exploits search query to count results for",
+              },
+              facets: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "List of facets to include in the count results (e.g., ['type', 'platform'])",
+              },
+            },
+            required: ["query"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              total: { type: "number" },
+              facets: { type: "object", additionalProperties: true },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "create_alert",
+          description:
+            "Create a persistent Shodan network alert that monitors one or more IPs/ranges and reports changes over time",
+          inputSchema: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "Descriptive name for the alert",
+              },
+              ip: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "List of IPs or CIDR ranges to monitor (e.g., ['1.2.3.4', '10.0.0.0/24'])",
+              },
+              expires: {
+                type: "number",
+                description:
+                  "Number of seconds the alert should be active for before automatically expiring (omit for no expiration)",
+              },
+            },
+            required: ["name", "ip"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              created: { type: "string" },
+              expiration: { type: ["string", "null"] },
+              expires: { type: ["number", "null"] },
+              size: { type: "number" },
+              filters: {
+                type: "object",
+                properties: {
+                  ip: { type: "array", items: { type: "string" } },
+                },
+                additionalProperties: true,
+              },
+              triggers: { type: "object", additionalProperties: true },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: false,
+            openWorldHint: true,
+          },
+        },
+        {
+          name: "list_alerts",
+          description: "List all configured Shodan network alerts on the account",
+          inputSchema: {
+            type: "object",
+            properties: {
+              include_expired: {
+                type: "boolean",
+                description:
+                  "Whether to include expired alerts in the results (default: true)",
+              },
+            },
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              count: { type: "number" },
+              alerts: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "get_alert",
+          description: "Get details about a specific Shodan network alert by ID",
+          inputSchema: {
+            type: "object",
+            properties: {
+              alert_id: {
+                type: "string",
+                description: "ID of the alert to retrieve",
+              },
+            },
+            required: ["alert_id"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              name: { type: "string" },
+              created: { type: "string" },
+              expiration: { type: ["string", "null"] },
+              expires: { type: ["number", "null"] },
+              size: { type: "number" },
+              filters: {
+                type: "object",
+                properties: {
+                  ip: { type: "array", items: { type: "string" } },
+                },
+                additionalProperties: true,
+              },
+              triggers: { type: "object", additionalProperties: true },
+              notifiers: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+              error: {
+                type: "string",
+                description:
+                  "Present on failure (e.g. 401 unauthorized or 404 not found)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "delete_alert",
+          description:
+            "Permanently delete a Shodan network alert by ID. This stops monitoring and cannot be undone.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              alert_id: {
+                type: "string",
+                description: "ID of the alert to delete",
+              },
+            },
+            required: ["alert_id"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              error: {
+                type: "string",
+                description:
+                  "Present on failure (e.g. 401 unauthorized or 404 not found)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: {
+            readOnlyHint: false,
+            destructiveHint: true,
+            idempotentHint: true,
+            openWorldHint: true,
+          },
+        },
+        {
+          name: "list_notifier_providers",
+          description:
+            "List available Shodan notifier providers (e.g. slack, email, webhook, telegram) and the arguments each one requires",
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              providers: {
+                type: "object",
+                description: "Map of provider name to its required arguments",
+                additionalProperties: true,
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "list_notifiers",
+          description: "List all configured Shodan notifiers on the account",
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              total: { type: "number" },
+              notifiers: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: { readOnlyHint: true, openWorldHint: true },
+        },
+        {
+          name: "create_notifier",
+          description:
+            "Create a new Shodan notifier (e.g. Slack, email, webhook) that network alerts can send events to",
+          inputSchema: {
+            type: "object",
+            properties: {
+              provider: {
+                type: "string",
+                description:
+                  "Notifier provider name (e.g. 'slack', 'email', 'webhook', 'telegram'). Use list_notifier_providers to see available options.",
+              },
+              args: {
+                type: "object",
+                additionalProperties: true,
+                description:
+                  "Provider-specific arguments (e.g., {\"webhook_url\": \"https://...\"} for slack)",
+              },
+              description: {
+                type: "string",
+                description: "Optional human-readable description of the notifier",
+              },
+            },
+            required: ["provider", "args"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              success: { type: "boolean" },
+              error: {
+                type: "string",
+                description: "Present on failure (e.g. 401 unauthorized)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: false,
+            openWorldHint: true,
+          },
+        },
+        {
+          name: "delete_notifier",
+          description:
+            "Permanently delete a Shodan notifier by ID. This cannot be undone.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              notifier_id: {
+                type: "string",
+                description: "ID of the notifier to delete",
+              },
+            },
+            required: ["notifier_id"],
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              error: {
+                type: "string",
+                description:
+                  "Present on failure (e.g. 401 unauthorized or 404 not found)",
+              },
+              message: { type: "string" },
+              status: { type: "number" },
+            },
+            additionalProperties: true,
+          },
+          annotations: {
+            readOnlyHint: false,
+            destructiveHint: true,
+            idempotentHint: true,
+            openWorldHint: true,
+          },
+        },
       ],
     };
   });
@@ -2637,6 +3525,360 @@ async function main() {
           throw new ProtocolError(
             ProtocolErrorCode.InternalError,
             `Error getting CVEs by EPSS: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "get_internetdb_host": {
+        const ip = String(request.params.arguments?.ip);
+        if (!ip) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "IP address is required",
+          );
+        }
+
+        try {
+          const hostInfo = await internetDBClient.getHost(ip);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(hostInfo, null, 2),
+              },
+            ],
+            structuredContent: hostInfo,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error getting InternetDB host info: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "search_exploits": {
+        const query = String(request.params.arguments?.query);
+        if (!query) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Search query is required",
+          );
+        }
+
+        const page = Number(request.params.arguments?.page) || 1;
+        const facets = Array.isArray(request.params.arguments?.facets)
+          ? request.params.arguments?.facets.map(String)
+          : [];
+
+        try {
+          const results = await exploitsClient.search(query, page, facets);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(results, null, 2),
+              },
+            ],
+            structuredContent: results,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error searching exploits: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "count_exploits": {
+        const query = String(request.params.arguments?.query);
+        if (!query) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Search query is required",
+          );
+        }
+
+        const facets = Array.isArray(request.params.arguments?.facets)
+          ? request.params.arguments?.facets.map(String)
+          : [];
+
+        try {
+          const results = await exploitsClient.count(query, facets);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(results, null, 2),
+              },
+            ],
+            structuredContent: results,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error counting exploits: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "create_alert": {
+        const name = String(request.params.arguments?.name);
+        const ipArg = request.params.arguments?.ip;
+        if (!name || !Array.isArray(ipArg) || ipArg.length === 0) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Alert name and a non-empty ip array are required",
+          );
+        }
+
+        const expires =
+          request.params.arguments?.expires !== undefined
+            ? Number(request.params.arguments.expires)
+            : undefined;
+
+        try {
+          const alert = await shodanClient.createAlert(
+            name,
+            ipArg.map(String),
+            expires,
+          );
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(alert, null, 2),
+              },
+            ],
+            structuredContent: alert,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error creating alert: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "list_alerts": {
+        const includeExpired =
+          request.params.arguments?.include_expired !== undefined
+            ? Boolean(request.params.arguments.include_expired)
+            : true;
+
+        try {
+          const alerts = await shodanClient.listAlerts(includeExpired);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(alerts, null, 2),
+              },
+            ],
+            structuredContent: alerts,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error listing alerts: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "get_alert": {
+        const alertId = String(request.params.arguments?.alert_id);
+        if (!alertId) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Alert ID is required",
+          );
+        }
+
+        try {
+          const alert = await shodanClient.getAlert(alertId);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(alert, null, 2),
+              },
+            ],
+            structuredContent: alert,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error getting alert: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "delete_alert": {
+        const alertId = String(request.params.arguments?.alert_id);
+        if (!alertId) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Alert ID is required",
+          );
+        }
+
+        try {
+          const result = await shodanClient.deleteAlert(alertId);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+            structuredContent: result,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error deleting alert: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "list_notifier_providers": {
+        try {
+          const providers = await shodanClient.listNotifierProviders();
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(providers, null, 2),
+              },
+            ],
+            structuredContent: providers,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error listing notifier providers: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "list_notifiers": {
+        try {
+          const notifiers = await shodanClient.listNotifiers();
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(notifiers, null, 2),
+              },
+            ],
+            structuredContent: notifiers,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error listing notifiers: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "create_notifier": {
+        const provider = String(request.params.arguments?.provider);
+        const args =
+          request.params.arguments?.args &&
+          typeof request.params.arguments.args === "object"
+            ? request.params.arguments.args
+            : undefined;
+        if (!provider || !args) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Notifier provider and args object are required",
+          );
+        }
+
+        const description = request.params.arguments?.description
+          ? String(request.params.arguments.description)
+          : undefined;
+
+        try {
+          const notifier = await shodanClient.createNotifier(
+            provider,
+            args,
+            description,
+          );
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(notifier, null, 2),
+              },
+            ],
+            structuredContent: notifier,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error creating notifier: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      case "delete_notifier": {
+        const notifierId = String(request.params.arguments?.notifier_id);
+        if (!notifierId) {
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
+            "Notifier ID is required",
+          );
+        }
+
+        try {
+          const result = await shodanClient.deleteNotifier(notifierId);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+            structuredContent: result,
+          };
+        } catch (error) {
+          if (error instanceof ProtocolError) {
+            throw error;
+          }
+          throw new ProtocolError(
+            ProtocolErrorCode.InternalError,
+            `Error deleting notifier: ${(error as Error).message}`,
           );
         }
       }
